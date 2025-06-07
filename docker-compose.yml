@@ -45,9 +45,9 @@ services:
         condition: service_healthy
     networks:
       - chatbot-network
-    volumes:
-      - ./app:/app:ro  # Mount as read-only for development
-      - /app/node_modules
+    # volumes:
+    #   - ./app:/app:ro  # Mount as read-only for development
+    #   - /app/node_modules
 
 volumes:
   mysql_data:
