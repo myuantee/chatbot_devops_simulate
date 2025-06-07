@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chatbot Interface with Voice Recording Control</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+      background: white;
+    }
+    .chat-bubble {
+      max-width: 70%;
+      padding: 10px 15px;
+      margin: 5px 0;
+      border-radius: 20px;
+    }
+    .user {
+      align-self: flex-end;
+      background-color: #d1e7dd;
+    }
+    .bot {
+      align-self: flex-start;
+      background-color: #e2e3e5;
+    }
+    .input-container {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background: white;
+      border-top: 1px solid #ccc;
+      position: relative;
+    }
+    #userInput {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #sendBtn, #voiceBtn {
+      background: none;
+      border: none;
+      margin-left: 10px;
+      cursor: pointer;
+      position: relative;
+      outline: none;
+    }
+    #voiceBtn img {
+      width: 30px;
+      height: 30px;
+    }
+    #progressBarContainer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      width: 100%;
+      background-color: #eee;
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0;
+      background-color: #4caf50;
+      transition: width 0.1s linear;
+    }
+    .error-message {
+      color: red;
+      font-weight: bold;
+      padding: 10px;
+      text-align: center;
+      background: #ffe6e6;
+      margin-bottom: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container" id="chatContainer">
+    <!-- Chat messages will appear here -->
+  </div>
+  <div class="input-container">
+    <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off" />
+    <button id="sendBtn">Send</button>
+    <button id="voiceBtn" title="Start Voice Input">
+      <img src="https://i.postimg.cc/1tzVTVM1/mic.jpg" alt="Voice Input" />
+    </button>
+    <div id="progressBarContainer">
+      <div id="progressBar"></div>
+    </div>
+  </div>
+  <div id="errorMessage" class="error-message"></div>
+
+  <script>
+    const chatContainer = document.getElementById('chatContainer');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const voiceBtn = document.getElementById('voiceBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const progressBarContainer = document.getElementById('progressBarContainer');
+    const progressBar = document.getElementById('progressBar');
+
+    function addMessage(message, sender) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('chat-bubble', sender);
+      messageDiv.textContent = message;
+      chatContainer.appendChild(messageDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+      
+      addMessage(message, 'user');
+      userInput.value = '';
+      
+      try {
+        const response = await fetch('/api/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message, sender: 'user' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Store bot response
+          await fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: data.response, sender: 'bot' })
+          });
+          
+          addMessage(data.response, 'bot');
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        addMessage('Error: Could not send message', 'bot');
+      }
+    }
+
+    // Load chat history on page load
+    async function loadChatHistory() {
+      try {
+        const response = await fetch('/api/messages');
+        const messages = await response.json();
+        
+        // Display messages in reverse order (oldest first)
+        messages.reverse().forEach(msg => {
+          addMessage(msg.message, msg.sender);
+        });
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+      }
+    }
+
+    // Load history when page loads
+    window.addEventListener('load', loadChatHistory);
+
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    /* ... rest of the existing JavaScript code ... */
+  </script>
+</body>
+</html>

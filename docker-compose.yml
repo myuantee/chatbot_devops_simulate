@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: chatbot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: chatbot_db
+      MYSQL_USER: chatbot_user
+      MYSQL_PASSWORD: chatbot_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - chatbot-network
+
+  # Web Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: chatbot-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: mysql
+      DB_USER: chatbot_user
+      DB_PASSWORD: chatbot_pass
+      DB_NAME: chatbot_db
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - chatbot-network
+    volumes:
+      - ./app:/app:ro  # Mount as read-only for development
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  chatbot-network:
+    driver: bridge
