@@ -31,8 +31,15 @@ COPY app/package*.json ./
 # Install only production dependencies
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy application files
-COPY --from=builder --chown=nodejs:nodejs /app .
+# Copy application files (excluding node_modules to preserve production dependencies)
+COPY --from=builder --chown=nodejs:nodejs /app/app.js ./
+COPY --from=builder --chown=nodejs:nodejs /app/*.js ./
+# Add any other specific files/directories you need, but NOT the entire /app directory
+
+# Alternative: Copy everything except node_modules
+# COPY --from=builder --chown=nodejs:nodejs /app/ ./
+# RUN rm -rf node_modules
+# RUN npm ci --only=production
 
 # Switch to non-root user
 USER nodejs
